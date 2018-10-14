@@ -115,14 +115,27 @@ class BaseCamera(object):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Camera_compare(BaseCamera):
     video_source = 0
     last_encoding = []
     encodings_core = {}
     encodings_few = {}
     enc_reset_cnt = 0
-    enc_reset_cnt_lim = 20
-    enc_add_to_core_cnt_lim = 10
+    enc_reset_cnt_lim = 50
+    enc_add_to_core_cnt_lim = 20
     few_id_cnt = 0
     name_dict = {}
     
@@ -132,7 +145,7 @@ class Camera_compare(BaseCamera):
             #structure 0-ID 1-Name
             next(reader, None) 
             name_dict = {int(rows[0]):rows[1] for rows in reader}
-            print(name_dict)
+            print("dictionary: ",name_dict)
         return name_dict
 
     #some logic to upadte user names dict
@@ -152,8 +165,8 @@ class Camera_compare(BaseCamera):
             for key, value in Camera_compare.encodings_core.items():
                 if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
                     try:
-                        print("key found")
                         name = Camera_compare.name_dict[key]
+                        print("key %s found in dictionary = %s"%(str(key),name))
                     except KeyError:
                         name = str(key)
                     print("Found likeness in core, name = %s"%name)
@@ -163,14 +176,14 @@ class Camera_compare(BaseCamera):
             print("No likeness found in core, name = %s"%name)
         return name     
 
-    def add_to_core(key,encodings):
+    def add_to_core(encodings):
         #next key
         num = len(Camera_compare.encodings_core)
         exist_in_core = 0
         
         #transform incoming encodings --> averaging
         encoding = list(np.average(encodings,axis = 0))
-        
+        print("add to core ",np.shape(encoding))
         if bool(Camera_compare.encodings_core):
             for key, value in Camera_compare.encodings_core.items():
                 if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
@@ -207,7 +220,6 @@ class Camera_compare(BaseCamera):
         if bool(Camera_compare.encodings_few):
             likehood_counter = 0
             merge_dict = {}
-            max_likeness_cnt = -1
             full_dict = {}
 
             #Camera_compare.print_few_struct()
@@ -223,18 +235,17 @@ class Camera_compare(BaseCamera):
                     if likehood_counter > 0:
                         merge_dict[merge_num_0]=key
                     else:
-                        print("Appending likeness to encodings_few node '%s', likehood_counter=%s"%(key,likehood_counter+1))
+                        print("Appending likeness to encodings_few node '%s'"%(key))
                         #do not add to merging nodes
                         Camera_compare.encodings_few[key].append(encoding)
                         merge_num_0 = key
                     likehood_counter += 1
-            
 
             #adding new likeness node to few base
             if likehood_counter == 0:
                 Camera_compare.encodings_few[Camera_compare.few_id_cnt]=[encoding] 
                 print("No likeness found in few, creating new node %s"%Camera_compare.few_id_cnt)
-                Camera_compare.few_id_cnt =+ 1
+                Camera_compare.few_id_cnt += 1
    
             #merging two likeness nodes
             if bool(merge_dict):
@@ -246,9 +257,8 @@ class Camera_compare(BaseCamera):
             if bool(full_dict):
                 for key, value in full_dict.items():
                     print("few node %s is full"%value)
-                    Camera_compare.add_to_core(key, Camera_compare.encodings_few[value])
-                    Camera_compare.encodings_few.pop(value)
- 
+                    Camera_compare.add_to_core(Camera_compare.encodings_few[value])
+                    Camera_compare.encodings_few.pop(value) 
             
             Camera_compare.print_few_struct()
            
@@ -311,9 +321,8 @@ class Camera_compare(BaseCamera):
             #    d.polygon(face_landmarks['right_eyebrow'], fill=(68, 54, 39, 128))
             #    frame = numpy.array(pil_image.getdata(),
             #        numpy.uint8).reshape(pil_image.size[1], pil_image.size[0], 3)
-
-
             # encode as a jpeg image and return it
-            yield cv2.imencode('.jpg', frame)[1].tobytes()  #this for app
-            #yield frame  #this for notebook jupyter
+            yield cv2.imencode('.jpg', frame)[1].tobytes()
+            #yield frame
+            
             
