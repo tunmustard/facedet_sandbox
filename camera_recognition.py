@@ -135,7 +135,7 @@ class Camera_compare(BaseCamera):
     encodings_few = {}
     enc_reset_cnt = 0
     enc_reset_cnt_lim = 50
-    enc_add_to_core_cnt_lim = 20
+    enc_add_to_core_cnt_lim = 8
     few_id_cnt = 0
     name_dict = {}
     
@@ -148,7 +148,7 @@ class Camera_compare(BaseCamera):
             print("dictionary: ",name_dict)
         return name_dict
 
-    #some logic to upadte user names dict
+    #some logic to update user names dict
     def update_name_dict(filename):
         if Camera_compare.enc_reset_cnt == 0:
             Camera_compare.name_dict = Camera_compare.get_names_dict(filename)
@@ -158,6 +158,13 @@ class Camera_compare(BaseCamera):
     def set_video_source(source):
         Camera_compare.video_source = source
 
+    def get_id_name(key):
+        try:
+            name = Camera_compare.name_dict[key]
+        except KeyError:
+            name = str(key)
+        return name
+
     def get_name(encoding):
         name = "Undefined"
         found_likeness=0
@@ -166,10 +173,10 @@ class Camera_compare(BaseCamera):
                 if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
                     try:
                         name = Camera_compare.name_dict[key]
-                        print("key %s found in dictionary = %s"%(str(key),name))
+                        print("Found likeness in core key, from dictionary ID %s = %s"%(str(key),name))
                     except KeyError:
                         name = str(key)
-                    print("Found likeness in core, name = %s"%name)
+                        print("Found likeness in core, ID %s"%name)
                     found_likeness = 1
                     break
         if not found_likeness:
@@ -182,28 +189,31 @@ class Camera_compare(BaseCamera):
         exist_in_core = 0
         
         #transform incoming encodings --> averaging
-        encoding = list(np.average(encodings,axis = 0))
-        print("add to core ",np.shape(encoding))
+        encoding = np.average(encodings,axis = 0)
         if bool(Camera_compare.encodings_core):
             for key, value in Camera_compare.encodings_core.items():
                 if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
                     #encoding already exist in core
-                    exist_in_core +=1  
+                    exist_in_core = exist_in_core + 1
+                    break
         
         if exist_in_core==0:
             ##add new encoding to core
             Camera_compare.encodings_core[num] = [encoding]    
-        
-        print("Adding to core with id = %s"%num)
+            print("Adding to core with id = %s"%num)
+        else:
+            print("Id already exist in core")
+            
 
     def reset_few():
         #reset few buffer
+        Camera_compare.enc_reset_cnt+=1
         if Camera_compare.enc_reset_cnt >= Camera_compare.enc_reset_cnt_lim:
             Camera_compare.encodings_few = {}
             Camera_compare.enc_reset_cnt = 0
             Camera_compare.few_id_cnt = 0
             print("reset counter reached, clearing encodings_few")
-        Camera_compare.enc_reset_cnt+=1
+        
     
     def print_few_struct():
         #Printout
@@ -228,10 +238,8 @@ class Camera_compare(BaseCamera):
                 if len(value)>=Camera_compare.enc_add_to_core_cnt_lim:
                     full_dict[len(full_dict)]=key
                     continue
-                    
                 #check encodings few base
-                if any(face_recognition.compare_faces(value, encoding, tolerance = 0.2)):
-                    print(face_recognition.compare_faces(value, encoding, tolerance = 0.2))
+                if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
                     if likehood_counter > 0:
                         merge_dict[merge_num_0]=key
                     else:
@@ -301,7 +309,6 @@ class Camera_compare(BaseCamera):
                 
                 # See if the face is a match for the known face(s)
                 name = Camera_compare.get_name(face_encoding)
-        
                 face_iter += 1
   
                 # Draw a box around the face
@@ -324,5 +331,4 @@ class Camera_compare(BaseCamera):
             # encode as a jpeg image and return it
             yield cv2.imencode('.jpg', frame)[1].tobytes()
             #yield frame
-            
             

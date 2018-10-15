@@ -1,9 +1,8 @@
-<html>
-  <head>
-    <title>Video Streaming Demonstration</title>
-  </head>
-  <body>
-    <h1>Video Streaming Demonstration</h1>
-    <img src="{{ url_for('video_feed') }}">
-  </body>
-</html>
+{% extends "layout.html" %}
+{% block body %}
+  <h1>Stream</h1>
+	<p><img src="{{ url_for('video_feed') }}"></p>
+  {% if 'username' in session: %}
+	<p>logged in</p>
+  {% endif %}
+{% endblock %}
