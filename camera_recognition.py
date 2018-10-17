@@ -130,22 +130,30 @@ class BaseCamera(object):
 
 class Camera_compare(BaseCamera):
     video_source = 0
+    path_core_img = "./static/idimage/"
+    path_core_csv = "./core_export.csv" #coreexport
+    path_dict_csv = './dict.csv'
+    img_format=".jpg"
     last_encoding = []
     encodings_core = {}
     encodings_few = {}
     enc_reset_cnt = 0
-    enc_reset_cnt_lim = 50
+    enc_reset_cnt_lim = 20
     enc_add_to_core_cnt_lim = 8
     few_id_cnt = 0
     name_dict = {}
     
     def get_names_dict(file_name):
-        with open(file_name, mode='r') as infile:
-            reader = csv.reader(infile)
-            #structure 0-ID 1-Name
-            next(reader, None) 
-            name_dict = {int(rows[0]):rows[1] for rows in reader}
-            print("dictionary: ",name_dict)
+        try:
+            with open(file_name, mode='r') as infile:
+                reader = csv.reader(infile)
+                #structure 0-ID 1-Name
+                next(reader, None) 
+                name_dict = {int(rows[0]):rows[1] for rows in reader}
+                print("dictionary: ",name_dict)
+        except EnvironmentError: # parent of IOError, OSError *and* WindowsError where available
+            print("--No dictionary file--")
+            name_dict = {}   
         return name_dict
 
     #some logic to update user names dict
@@ -164,7 +172,7 @@ class Camera_compare(BaseCamera):
         except KeyError:
             name = str(key)
         return name
-
+    
     def get_name(encoding):
         name = "Undefined"
         found_likeness=0
@@ -201,9 +209,11 @@ class Camera_compare(BaseCamera):
             ##add new encoding to core
             Camera_compare.encodings_core[num] = [encoding]    
             print("Adding to core with id = %s"%num)
+            return num
         else:
             print("Id already exist in core")
-            
+            return None
+             
 
     def reset_few():
         #reset few buffer
@@ -212,6 +222,7 @@ class Camera_compare(BaseCamera):
             Camera_compare.encodings_few = {}
             Camera_compare.enc_reset_cnt = 0
             Camera_compare.few_id_cnt = 0
+            Camera_compare.core_export(Camera_compare.encodings_core)
             print("reset counter reached, clearing encodings_few")
         
     
@@ -224,8 +235,33 @@ class Camera_compare(BaseCamera):
         else:
             printout_text = "%s -- none --"%printout_text   
         print(printout_text) 
-        
-    def add_to_few(encoding):
+
+    def add_to_img(new_id,crop_img,save_path=path_core_img,save_format=img_format):
+        return cv2.imwrite(''.join((save_path,str(new_id),save_format)),crop_img)        
+
+    def core_export(core,filename=path_core_csv):
+        a = [[key, ','.join(str(e) for e in value[0]) ] for key,value in core.items()]
+        with open(filename, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=';')
+            csvwriter.writerow(['ID', 'encoding'])
+            for k in a:
+                csvwriter.writerow([k[0], k[1]])
+            print("<<--core has been exported-->>")
+
+    def core_import(filename=path_core_csv):   
+        try:
+            with open(filename, mode='r') as csvfile:
+                reader = csv.reader(csvfile,delimiter=';')
+                #structure 0-ID 1-eocodings
+                next(reader, None) 
+                core_imported = {int(rows[0]):[[float(x) for x in rows[1].split(',')]] for rows in reader}
+                print("<<--core has been imported-->>")
+        except EnvironmentError: # parent of IOError, OSError *and* WindowsError where available
+            print("--No core import file--")
+            core_imported = {}
+        return core_imported
+    
+    def add_to_few(encoding,rgb_frame,top, right, bottom, left):
 
         if bool(Camera_compare.encodings_few):
             likehood_counter = 0
@@ -239,7 +275,7 @@ class Camera_compare(BaseCamera):
                     full_dict[len(full_dict)]=key
                     continue
                 #check encodings few base
-                if any(face_recognition.compare_faces(value, encoding, tolerance = 0.5)):
+                if any(face_recognition.compare_faces(value, encoding, tolerance = 0.3)):
                     if likehood_counter > 0:
                         merge_dict[merge_num_0]=key
                     else:
@@ -265,7 +301,10 @@ class Camera_compare(BaseCamera):
             if bool(full_dict):
                 for key, value in full_dict.items():
                     print("few node %s is full"%value)
-                    Camera_compare.add_to_core(Camera_compare.encodings_few[value])
+                    new_id = Camera_compare.add_to_core(Camera_compare.encodings_few[value])
+                    #add to image base if have added to core successfully
+                    if new_id is not None:
+                        Camera_compare.add_to_img(new_id,rgb_frame[top:bottom,left:right])
                     Camera_compare.encodings_few.pop(value) 
             
             Camera_compare.print_few_struct()
@@ -280,7 +319,10 @@ class Camera_compare(BaseCamera):
         camera = cv2.VideoCapture(Camera_compare.video_source)
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
-
+        
+        #core_import
+        Camera_compare.encodings_core = Camera_compare.core_import()
+        
         while True:
             # read current frame
             _, frame = camera.read()
@@ -299,13 +341,13 @@ class Camera_compare(BaseCamera):
                 print("--------------->")
                 
                 #udate name dictionary
-                Camera_compare.update_name_dict('dict.csv')
+                Camera_compare.update_name_dict(Camera_compare.path_dict_csv)
                 
                 #clear few buffer time to time
                 Camera_compare.reset_few()
                 
                 #check new encoding
-                Camera_compare.add_to_few(face_encoding)
+                Camera_compare.add_to_few(face_encoding,rgb_frame,top, right, bottom, left)
                 
                 # See if the face is a match for the known face(s)
                 name = Camera_compare.get_name(face_encoding)
@@ -313,7 +355,9 @@ class Camera_compare(BaseCamera):
   
                 # Draw a box around the face
                 cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-
+                
+            
+            
                 # Draw a label with a name below the face
                 cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
                 font = cv2.FONT_HERSHEY_DUPLEX

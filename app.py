@@ -44,7 +44,7 @@ def logout():
 @app.route('/report')
 def report():
     """Report homepage"""
-    encodings_core_dict = {key: Camera.get_id_name(key)  for (key, value) in Camera.encodings_core.items()} #
+    encodings_core_dict = {key: [Camera.get_id_name(key),''.join((Camera.path_core_img,str(key),Camera.img_format))]  for (key, value) in Camera.encodings_core.items()} #
     return render_template('report.html',encodings_core_dict=encodings_core_dict)
 
 def gen(camera):
