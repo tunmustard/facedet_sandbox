@@ -1,7 +1,9 @@
-###### This is my experimental/training project with face-detection API, OpenCV webcam capture and Flash web server. 
+# About project
+###### This is my experimental/training project with face-detection API, OpenCV webcam capture and Flash web server with video streaming. 
 This project is based on following packages:  
 https://github.com/miguelgrinberg/flask-video-streaming - wonderfull tutorial for webcam video streaming Flask server  
 https://github.com/ageitgey/face_recognition - awesome CNN face recongition system with API  
+https://docs.opencv.org/4.0.0-alpha/ OpenCV API 
 
 **What it does:**
 - Start local Flask web server on http://0.0.0.0:5000
@@ -19,3 +21,5 @@ https://github.com/ageitgey/face_recognition - awesome CNN face recongition syst
 **Future steps:**
 - In progressssssssss....................................
 
+# Installation guide
+quite lasy to finish this ....
