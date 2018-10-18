@@ -156,7 +156,7 @@ class Camera_compare(BaseCamera):
             name_dict = {}   
         return name_dict
 
-    #some logic to update user names dict
+    #some logic to update user names dict #
     def update_name_dict(filename):
         if Camera_compare.enc_reset_cnt == 0:
             Camera_compare.name_dict = Camera_compare.get_names_dict(filename)
