@@ -6,4 +6,16 @@ https://github.com/ageitgey/face_recognition - awesome CNN face recongition syst
 **What it does:**
 - Start local Flask web server on http://0.0.0.0:5000
 - Capture video stream from your webcam (check if your webcam is supported by [Linux UVC driver](http://www.ideasonboard.org/uvc/#devices))
-- Find face locations in each captured frame
+- Find face locations in each captured frame (facerecognition API)
+- Classify each unique face and add it to internal face encoding list with it's unique ID, crop new face image and save it in jpg.
+- Get ID from internal list for each face in frame, add rectangle mark, add it's internal ID
+- It can import dictionary from 'dict.csv' file with pairs "ID","Name" and mark a proper name instead of face internal ID
+- Automatic import/export internal encoding base in .csv file, so all encodings will be save in case of application restart
+- Web interface allows to login into "report" page (login/pass = admin/secret) and take a look on internal encolding face images (ID/NAME/IMAGE)
+
+**Next step:**
+- Add event list (pairs ID/time) and make web interface for this
+
+**Future steps:**
+- In progressssssssss....................................
+
